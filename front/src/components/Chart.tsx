@@ -10,7 +10,6 @@ interface IChartProps {
 function Chart(props: IChartProps) {
   const { data } = props;
   useLayoutEffect(() => {
-    console.log(data);
     const root = am5.Root.new("chartdiv");
 
     root.setThemes([am5themes_Animated.new(root)]);
@@ -45,6 +44,7 @@ function Chart(props: IChartProps) {
     // Create Y-axis
     const yAxis = chart.yAxes.push(
       am5xy.ValueAxis.new(root, {
+        min: 0,
         renderer: am5xy.AxisRendererY.new(root, {}),
         tooltip: am5.Tooltip.new(root, {
           labelText: "{valueX}",
@@ -63,7 +63,7 @@ function Chart(props: IChartProps) {
 
     // Create series
     const series1 = chart.series.push(
-      am5xy.ColumnSeries.new(root, {
+      am5xy.LineSeries.new(root, {
         name: "Series",
         xAxis: xAxis,
         yAxis: yAxis,
