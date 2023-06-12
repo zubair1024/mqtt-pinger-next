@@ -14,14 +14,11 @@ export default async function handler(
 ) {
   const { startDate: startDateString, endDate: endDateString } = req.query;
   if (req.method === "GET") {
-    console.log(startDateString);
-    console.log(endDateString);
-
     const startTime = dayjs(startDateString as string).toDate();
     const endTime = dayjs(endDateString as string).toDate();
 
     await connectDB();
-    const data = await Ping.aggregate([
+    const data = (await Ping.aggregate([
       {
         $match: {
           eventTime: {
@@ -50,7 +47,6 @@ export default async function handler(
                   second: { $second: "$timestamp" },
                 },
               },
-              timezone: "Europe/Berlin", // Replace with your desired timezone
             },
           },
           count: { $sum: 1 },
@@ -59,8 +55,34 @@ export default async function handler(
       {
         $sort: { _id: 1 },
       },
-    ]);
-    return res.status(200).json({ data });
+    ])) as { _id: string; count: number }[];
+
+    console.log(data.length);
+
+    const result = [];
+    let pointer = dayjs(startTime);
+    const end = dayjs(endTime);
+    while (pointer < end) {
+      const timestamp = pointer.format("YYYY-MM-DD HH:mm:ss");
+
+      const index = data.findIndex((i) => i._id === timestamp);
+
+      let count = 0;
+
+      if (index !== -1) {
+        // Remove the element from the array
+        const removedElement = data.splice(index, 1)[0];
+        count = removedElement.count;
+      }
+
+      result.push({
+        _id: timestamp,
+        count: count ?? 0,
+      });
+      pointer = pointer.add(1, "second");
+    }
+
+    return res.status(200).json({ data: result });
   }
   //@ts-expect-error ignore
   return res.status(404).send({});

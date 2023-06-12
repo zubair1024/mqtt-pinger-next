@@ -10,20 +10,16 @@ const brokerUrl = variables.MQTT_URL as string;
 
 const options: IClientOptions = {
   port: Number(variables.MQTT_PORT),
-  protocol: "mqtt",
 };
-
-if (variables.MQTT_TLS) {
-  const ca = fs.readFileSync(path.resolve("/", "assets", "ca.crt"));
-  const cert = fs.readFileSync(path.resolve("/", "assets", "client.crt"));
-  const key = fs.readFileSync(path.resolve("/", "assets", "client.key"));
-  Object.assign(options, {
-    ca: ca,
-    cert: cert,
-    key: key,
-    rejectUnauthorized: false,
-  });
-}
+const ca = fs.readFileSync(path.resolve("./src/assets/tls_client_ca.crt"));
+const cert = fs.readFileSync(path.resolve("./src/assets/tls_client_cert.crt"));
+const key = fs.readFileSync(path.resolve("./src/assets/tls_client_key.key"));
+Object.assign(options, {
+  ca: ca,
+  cert: cert,
+  key: key,
+  rejectUnauthorized: false,
+});
 
 async function run() {
   await connectDB();
@@ -48,15 +44,30 @@ async function run() {
     console.log(
       `Received message on topic '${topic}': ${message.toString()} at ${eventTime.toISOString()}`
     );
+    const date = new Date(message.toString());
     const ping = new Ping({
-      eventTime,
+      eventTime: date,
       message: message.toString(),
     });
     ping.save();
   });
 
+  client.on("error", (err) => {
+    logger.error("client error");
+    logger.error(err);
+  });
+
+  client.on("disconnect", (err) => {
+    logger.error("client disconnect");
+    logger.error(err);
+  });
+
+  client.on("reconnect", () => {
+    logger.error("client reconnect");
+  });
+
   setInterval(() => {
-    client.publish(variables.MQTT_PING_TOPIC, "Hello, from pinger!");
+    client.publish(variables.MQTT_PING_TOPIC, `${new Date().toISOString()}`);
   }, 1000);
 }
 
